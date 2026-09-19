@@ -23,5 +23,9 @@ spring:
     user:
       password: password
 
+jwt:
+  secret: 9a4f4c55534f5453494e474c454e4f54454e4f5547485345435245544b455931323334353637383930
+  expiration: 86400000
+
 server:
   port: 8080

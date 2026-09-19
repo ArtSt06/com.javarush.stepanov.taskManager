@@ -1,6 +1,7 @@
 package com.javarush.stepanov.taskmanager.service;
 
 import java.util.List;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 import com.javarush.stepanov.taskmanager.dto.TaskRequest;
@@ -9,6 +10,8 @@ import com.javarush.stepanov.taskmanager.model.entity.Task;
 import com.javarush.stepanov.taskmanager.model.entity.User;
 import com.javarush.stepanov.taskmanager.model.repository.TaskRepository;
 import com.javarush.stepanov.taskmanager.model.repository.UserRepository;
+
+import org.springframework.security.core.context.SecurityContextHolder;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -22,12 +25,27 @@ public class TaskService {
     private final UserRepository userRepository;
 
     private User getCurrentOwner() {
-        return userRepository.findAll().stream().findFirst()
-                .orElseGet(() -> userRepository.save(User.builder()
-                        .username("testuser")
-                        .email("test@mail.ru")
-                        .password("hashed_password")
-                        .build()));
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+
+        return userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("Авторизованный пользователь не найден в базе данных"));
+    }
+
+    private Task getTaskAndVerifyOwner(
+            Long id,
+            Supplier<? extends RuntimeException> notFoundSupplier,
+            Supplier<? extends RuntimeException> accessDeniedSupplier) {
+
+        User currentOwner = getCurrentOwner();
+
+        Task task = taskRepository.findById(id)
+                .orElseThrow(notFoundSupplier);
+
+        if (!task.getOwner().getId().equals(currentOwner.getId())) {
+            throw accessDeniedSupplier.get();
+        }
+
+        return task;
     }
 
     @Transactional
@@ -56,22 +74,22 @@ public class TaskService {
 
     @Transactional(readOnly = true)
     public TaskResponse getTaskById(Long id) {
-        User currentOwner = getCurrentOwner();
-
-        Task task = taskRepository.findById(id)
-                .filter(t -> t.getOwner().getId().equals(currentOwner.getId()))
-                .orElseThrow(() -> new RuntimeException("Задача не найдена или у вас нет прав на её просмотр"));
+        Task task = getTaskAndVerifyOwner(
+                id,
+                () -> new RuntimeException("Задача с таким ID не существует"),
+                () -> new RuntimeException("Отсутствуют права на просмотр этой задачи")
+        );
 
         return mapToResponse(task);
     }
 
     @Transactional
     public TaskResponse updateTask(Long id, TaskRequest request) {
-        User currentOwner = getCurrentOwner();
-
-        Task task = taskRepository.findById(id)
-                .filter(t -> t.getOwner().getId().equals(currentOwner.getId()))
-                .orElseThrow(() -> new RuntimeException("Задача не найдена или у вас нет прав на её изменение"));
+        Task task = getTaskAndVerifyOwner(
+                id,
+                () -> new RuntimeException("Задача с таким ID не существует"),
+                () -> new RuntimeException("Отсутствуют права на обновление этой задачи")
+        );
 
         task.setTitle(request.getTitle());
         task.setDescription(request.getDescription());
@@ -84,11 +102,11 @@ public class TaskService {
 
     @Transactional
     public void deleteTask(Long id) {
-        User currentOwner = getCurrentOwner();
-
-        Task task = taskRepository.findById(id)
-                .filter(t -> t.getOwner().getId().equals(currentOwner.getId()))
-                .orElseThrow(() -> new RuntimeException("Задача не найдена или у вас нет прав на её удаление"));
+        Task task = getTaskAndVerifyOwner(
+                id,
+                () -> new RuntimeException("Задача с таким ID не существует"),
+                () -> new RuntimeException("Отсутствуют права на удаление этой задачи")
+        );
 
         taskRepository.delete(task);
     }
