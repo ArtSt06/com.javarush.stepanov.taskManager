@@ -7,6 +7,7 @@ import com.javarush.stepanov.taskmanager.dto.TaskRequest;
 import com.javarush.stepanov.taskmanager.dto.TaskResponse;
 import com.javarush.stepanov.taskmanager.model.entity.Task;
 import com.javarush.stepanov.taskmanager.model.entity.User;
+import com.javarush.stepanov.taskmanager.model.enums.Role;
 import com.javarush.stepanov.taskmanager.model.repository.TaskRepository;
 import com.javarush.stepanov.taskmanager.model.repository.UserRepository;
 import com.javarush.stepanov.taskmanager.exception.AccessDeniedException;
@@ -41,7 +42,8 @@ public class TaskService {
         Task task = taskRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(ErrorMessageConstants.TASK_NOT_FOUND));
 
-        if (!task.getOwner().getId().equals(currentOwner.getId())) {
+        if (currentOwner.getRole() != Role.ADMIN &&
+                !task.getOwner().getId().equals(currentOwner.getId())) {
             throw new AccessDeniedException(accessDeniedMessage);
         }
 
