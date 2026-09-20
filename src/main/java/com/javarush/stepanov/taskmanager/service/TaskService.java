@@ -16,11 +16,13 @@ import com.javarush.stepanov.taskmanager.exception.ResourceNotFoundException;
 import org.springframework.security.core.context.SecurityContextHolder;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class TaskService {
 
     private final TaskRepository taskRepository;
@@ -59,6 +61,8 @@ public class TaskService {
                 .build();
 
         Task savedTask = taskRepository.save(task);
+
+        log.info("Создание задачи с ID: {}", savedTask.getId());
         return mapToResponse(savedTask);
     }
 
@@ -87,6 +91,8 @@ public class TaskService {
         task.setStatus(request.getStatus());
 
         Task updatedTask = taskRepository.save(task);
+
+        log.info("Обновление задачи с ID: {}", id);
         return mapToResponse(updatedTask);
     }
 
@@ -94,6 +100,7 @@ public class TaskService {
     public void deleteTask(Long id) {
         Task task = getTaskAndVerifyOwner(id, ErrorMessageConstants.ACCESS_DENIED_DELETE);
 
+        log.info("Удаление задачи с ID: {}", id);
         taskRepository.delete(task);
     }
 
