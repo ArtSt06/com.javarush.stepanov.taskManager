@@ -9,6 +9,10 @@ import com.javarush.stepanov.taskmanager.model.entity.User;
 import com.javarush.stepanov.taskmanager.model.enums.Role;
 import com.javarush.stepanov.taskmanager.model.repository.UserRepository;
 import com.javarush.stepanov.taskmanager.security.JwtTokenProvider;
+import com.javarush.stepanov.taskmanager.exception.InvalidCredentialsException;
+import com.javarush.stepanov.taskmanager.exception.ErrorMessageConstants;
+import com.javarush.stepanov.taskmanager.exception.UserAlreadyExistsException;
+
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -24,11 +28,11 @@ public class AuthService {
     @Transactional
     public void register(RegisterRequest request) {
         if (userRepository.existsByUsername(request.getUsername())) {
-            throw new RuntimeException("Пользователь с таким именем уже существует");
+            throw new UserAlreadyExistsException(ErrorMessageConstants.USERNAME_ALREADY_TAKEN);
         }
 
         if (userRepository.existsByEmail(request.getEmail())) {
-            throw new RuntimeException("Пользователь с таким Email уже существует");
+            throw new UserAlreadyExistsException(ErrorMessageConstants.EMAIL_ALREADY_TAKEN);
         }
 
         User user = User.builder()
@@ -41,17 +45,17 @@ public class AuthService {
         try {
             userRepository.save(user);
         } catch (DataIntegrityViolationException exception) {
-            throw new RuntimeException("Пользователь с таким именем или Email уже существует", exception);
+            throw new UserAlreadyExistsException(ErrorMessageConstants.USER_ALREADY_EXISTS);
         }
     }
 
     @Transactional(readOnly = true)
     public String login(LoginRequest request) {
         User user = userRepository.findByUsername(request.getUsername())
-                .orElseThrow(() -> new RuntimeException("Неверное имя пользователя или пароль"));
+                .orElseThrow(() -> new InvalidCredentialsException(ErrorMessageConstants.INVALID_LOGIN_OR_PASSWORD));
 
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
-            throw new RuntimeException("Неверное имя пользователя или пароль");
+            throw new InvalidCredentialsException(ErrorMessageConstants.INVALID_LOGIN_OR_PASSWORD);
         }
 
         return jwtTokenProvider.generateToken(user.getUsername(), user.getRole().name());
@@ -60,7 +64,7 @@ public class AuthService {
     @Transactional(readOnly = true)
     public void verifyUserExists(String username) {
         if (!userRepository.existsByUsername(username)) {
-            throw new RuntimeException("Пользователь не найден в базе данных");
+            throw new InvalidCredentialsException(ErrorMessageConstants.INVALID_AUTH_TOKEN);
         }
     }
 }

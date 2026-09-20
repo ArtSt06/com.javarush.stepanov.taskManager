@@ -1,7 +1,6 @@
 package com.javarush.stepanov.taskmanager.service;
 
 import java.util.List;
-import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 import com.javarush.stepanov.taskmanager.dto.TaskRequest;
@@ -10,6 +9,9 @@ import com.javarush.stepanov.taskmanager.model.entity.Task;
 import com.javarush.stepanov.taskmanager.model.entity.User;
 import com.javarush.stepanov.taskmanager.model.repository.TaskRepository;
 import com.javarush.stepanov.taskmanager.model.repository.UserRepository;
+import com.javarush.stepanov.taskmanager.exception.AccessDeniedException;
+import com.javarush.stepanov.taskmanager.exception.ErrorMessageConstants;
+import com.javarush.stepanov.taskmanager.exception.ResourceNotFoundException;
 
 import org.springframework.security.core.context.SecurityContextHolder;
 
@@ -28,21 +30,17 @@ public class TaskService {
         String username = SecurityContextHolder.getContext().getAuthentication().getName();
 
         return userRepository.findByUsername(username)
-                .orElseThrow(() -> new RuntimeException("Авторизованный пользователь не найден в базе данных"));
+                .orElseThrow(() -> new ResourceNotFoundException(ErrorMessageConstants.USER_NOT_FOUND));
     }
 
-    private Task getTaskAndVerifyOwner(
-            Long id,
-            Supplier<? extends RuntimeException> notFoundSupplier,
-            Supplier<? extends RuntimeException> accessDeniedSupplier) {
-
+    private Task getTaskAndVerifyOwner(Long id, String accessDeniedMessage) {
         User currentOwner = getCurrentOwner();
 
         Task task = taskRepository.findById(id)
-                .orElseThrow(notFoundSupplier);
+                .orElseThrow(() -> new ResourceNotFoundException(ErrorMessageConstants.TASK_NOT_FOUND));
 
         if (!task.getOwner().getId().equals(currentOwner.getId())) {
-            throw accessDeniedSupplier.get();
+            throw new AccessDeniedException(accessDeniedMessage);
         }
 
         return task;
@@ -74,22 +72,14 @@ public class TaskService {
 
     @Transactional(readOnly = true)
     public TaskResponse getTaskById(Long id) {
-        Task task = getTaskAndVerifyOwner(
-                id,
-                () -> new RuntimeException("Задача с таким ID не существует"),
-                () -> new RuntimeException("Отсутствуют права на просмотр этой задачи")
-        );
+        Task task = getTaskAndVerifyOwner(id, ErrorMessageConstants.ACCESS_DENIED_VIEW);
 
         return mapToResponse(task);
     }
 
     @Transactional
     public TaskResponse updateTask(Long id, TaskRequest request) {
-        Task task = getTaskAndVerifyOwner(
-                id,
-                () -> new RuntimeException("Задача с таким ID не существует"),
-                () -> new RuntimeException("Отсутствуют права на обновление этой задачи")
-        );
+        Task task = getTaskAndVerifyOwner(id, ErrorMessageConstants.ACCESS_DENIED_UPDATE);
 
         task.setTitle(request.getTitle());
         task.setDescription(request.getDescription());
@@ -102,17 +92,14 @@ public class TaskService {
 
     @Transactional
     public void deleteTask(Long id) {
-        Task task = getTaskAndVerifyOwner(
-                id,
-                () -> new RuntimeException("Задача с таким ID не существует"),
-                () -> new RuntimeException("Отсутствуют права на удаление этой задачи")
-        );
+        Task task = getTaskAndVerifyOwner(id, ErrorMessageConstants.ACCESS_DENIED_DELETE);
 
         taskRepository.delete(task);
     }
 
     private TaskResponse mapToResponse(Task task) {
         TaskResponse response = new TaskResponse();
+
         response.setId(task.getId());
         response.setTitle(task.getTitle());
         response.setDescription(task.getDescription());
@@ -120,6 +107,7 @@ public class TaskService {
         response.setStatus(task.getStatus());
         response.setCreatedAt(task.getCreatedAt());
         response.setUpdatedAt(task.getUpdatedAt());
+
         return response;
     }
 }
