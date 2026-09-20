@@ -1,13 +1,16 @@
 package com.javarush.stepanov.taskmanager.security.config;
 
 import com.javarush.stepanov.taskmanager.security.JwtAuthTokenFilter;
+import com.javarush.stepanov.taskmanager.exception.ErrorMessageConstants;
 
+import org.springframework.web.servlet.HandlerExceptionResolver;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
+import org.springframework.security.authentication.InsufficientAuthenticationException;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -20,6 +23,8 @@ public class SecurityConfig {
 
     private final JwtAuthTokenFilter jwtAuthTokenFilter;
 
+    private final HandlerExceptionResolver handlerExceptionResolver;
+
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
@@ -31,7 +36,14 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/actuator/health").permitAll()
-                        .anyRequest().authenticated()
+                        .anyRequest().authenticated())
+                .exceptionHandling(exceptions -> exceptions
+                        .authenticationEntryPoint((request, response, authException) ->
+                                handlerExceptionResolver.resolveException(
+                                        request,
+                                        response,
+                                        null,
+                                        new InsufficientAuthenticationException(ErrorMessageConstants.UNAUTHORIZED, authException)))
                 );
 
         http.addFilterBefore(jwtAuthTokenFilter, UsernamePasswordAuthenticationFilter.class);

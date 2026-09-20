@@ -3,6 +3,7 @@ package com.javarush.stepanov.taskmanager.exception;
 public interface ErrorMessageConstants {
     String INVALID_LOGIN_OR_PASSWORD = "Неверное имя пользователя или пароль";
     String INVALID_AUTH_TOKEN = "Неверный токен авторизации";
+    String UNAUTHORIZED = "Необходима авторизация";
 
     String ACCESS_DENIED_VIEW = "Отсутствуют права на просмотр этой задачи";
     String ACCESS_DENIED_UPDATE = "Отсутствуют права на обновление этой задачи";
