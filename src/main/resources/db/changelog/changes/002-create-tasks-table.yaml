@@ -1,0 +1,68 @@
+databaseChangeLog:
+  - changeSet:
+      id: 002-create-tasks-table
+      author: stepanov
+      changes:
+        - createTable:
+            tableName: tasks
+            columns:
+              - column:
+                  name: id
+                  type: bigint
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+
+              - column:
+                  name: title
+                  type: varchar(100)
+                  constraints:
+                    nullable: false
+
+              - column:
+                  name: description
+                  type: varchar(1000)
+
+              - column:
+                  name: status
+                  type: varchar(20)
+                  constraints:
+                    nullable: false
+
+              - column:
+                  name: deadline
+                  type: timestamp
+                  constraints:
+                    nullable: false
+
+              - column:
+                  name: owner_id
+                  type: bigint
+                  constraints:
+                    nullable: false
+
+              - column:
+                  name: created_at
+                  type: timestamp
+                  constraints:
+                    nullable: false
+
+              - column:
+                  name: updated_at
+                  type: timestamp
+
+        - addForeignKeyConstraint:
+            baseTableName: tasks
+            baseColumnNames: owner_id
+            constraintName: fk_tasks_users
+            referencedTableName: users
+            referencedColumnNames: id
+            onDelete: CASCADE
+
+        - createIndex:
+            tableName: tasks
+            indexName: idx_tasks_owner_id
+            columns:
+              - column:
+                  name: owner_id
