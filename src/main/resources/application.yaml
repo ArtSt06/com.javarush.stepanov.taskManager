@@ -24,6 +24,14 @@ spring:
     user:
       password: password
 
+springdoc:
+  swagger-ui:
+    operations-sorter: alpha
+    tags-sorter: alpha
+
+  api-docs:
+    path: /v3/api-docs
+
 jwt:
   secret: 9a4f4c55534f5453494e474c454e4f54454e4f5547485345435245544b455931323334353637383930
   expiration: 86400000
