@@ -3,9 +3,9 @@ spring:
     name: taskManager
 
   datasource:
-    url: jdbc:postgresql://localhost:5432/taskmanager
-    username: postgres
-    password: postgres
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:taskmanager}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:postgres}
     driver-class-name: org.postgresql.Driver
 
   jpa:
@@ -33,8 +33,8 @@ springdoc:
     path: /v3/api-docs
 
 jwt:
-  secret: 9a4f4c55534f5453494e474c454e4f54454e4f5547485345435245544b455931323334353637383930
-  expiration: 86400000
+  secret: ${JWT_SECRET:9a4f4c55534f5453494e474c454e4f54454e4f5547485345435245544b455931323334353637383930}
+  expiration: ${JWT_EXPIRATION:86400000}
 
 server:
-  port: 8080
+  port: ${SERVER_PORT:8080}
